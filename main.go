@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -15,12 +16,18 @@ func extractLevel(s string) (string, error) {
 	if !strings.Contains(s, prefix) {
 		return "", fmt.Errorf("level not found")
 	}
-	level := strings.TrimSpace(strings.TrimPrefix(s, prefix))
-	return level, nil
+
+	levelStr := strings.TrimSpace(strings.TrimPrefix(s, prefix))
+	level, err := strconv.Atoi(levelStr)
+	if err != nil {
+		return "", fmt.Errorf("error converting level to integer: %v", err)
+	}
+
+	return strconv.Itoa(level + 4), nil
 }
 
 func testPort(serverIP string, port int, wg *sync.WaitGroup) {
-	var levelStr string // 1. Déclarez levelStr ici
+	var levelStr string
 	defer wg.Done()
 	address := fmt.Sprintf("%s:%d", serverIP, port)
 
@@ -58,14 +65,14 @@ func testPort(serverIP string, port int, wg *sync.WaitGroup) {
 			fmt.Printf("Port %d accessible - POST Response for /check: %s\n", port, bodyHint)
 		}
 		// Effectuer une requête HTTP POST pour /iNeedAHint
-		hintURL = fmt.Sprintf("http://%s:%d/iNeedAHint", serverIP, port)
-		jsonStr = []byte(`{"User": "Yassine","secret": "75a2a2e61700e659a095e005a5738d82dd9de2aab048faeb9d56efc69f074f9e"}`)
-		respHint, err = http.Post(hintURL, "application/json", bytes.NewBuffer(jsonStr))
-		if err == nil {
-			defer respHint.Body.Close()
-			bodyHint, _ := ioutil.ReadAll(respHint.Body)
-			fmt.Printf("Port %d accessible - POST Response for /iNeedAHint %s\n", port, bodyHint)
-		}
+		// hintURL = fmt.Sprintf("http://%s:%d/iNeedAHint", serverIP, port)
+		// jsonStr = []byte(`{"User": "Yassine","secret": "75a2a2e61700e659a095e005a5738d82dd9de2aab048faeb9d56efc69f074f9e"}`)
+		// respHint, err = http.Post(hintURL, "application/json", bytes.NewBuffer(jsonStr))
+		// if err == nil {
+		// 	defer respHint.Body.Close()
+		// 	bodyHint, _ := ioutil.ReadAll(respHint.Body)
+		// 	fmt.Printf("Port %d accessible - POST Response for /iNeedAHint %s\n", port, bodyHint)
+		// }
 
 		// Effectuer une requête HTTP POST pour /getUserLevel
 		hintURL = fmt.Sprintf("http://%s:%d/getUserLevel", serverIP, port)
@@ -75,11 +82,12 @@ func testPort(serverIP string, port int, wg *sync.WaitGroup) {
 			defer respHint.Body.Close()
 			bodyHint, _ := ioutil.ReadAll(respHint.Body)
 			fmt.Printf("Port %d accessible - POST Response for : oui%soui\n", port, bodyHint)
-			levelStr, err := extractLevel(string(bodyHint))
+			levelStr, err = extractLevel(string(bodyHint))
 			if err != nil {
 				fmt.Printf("Error extracting level: %v\n", err)
 			} else {
 				fmt.Printf("Extracted Level: %s\n", levelStr)
+
 			}
 		}
 
@@ -113,8 +121,24 @@ func testPort(serverIP string, port int, wg *sync.WaitGroup) {
 		}
 
 		// Effectuer une requête HTTP POST pour /enterChallenge
+		// print Level %s
 		hintURL = fmt.Sprintf("http://%s:%d/submitSolution", serverIP, port)
-		jsonStr = []byte(fmt.Sprintf(`{"User": "Yassine", "secret": "75a2a2e61700e659a095e005a5738d82dd9de2aab048faeb9d56efc69f074f9e", "level": "0"}`, levelStr))
+		jsonStr = []byte(fmt.Sprintf(`
+{
+		"User": "Yassine",
+		"Secret": "75a2a2e61700e659a095e005a5738d82dd9de2aab048faeb9d56efc69f074f9e",
+		"Content": {
+			"Level": %s,
+			"Challenge": {
+				"Username": "Yassine",
+				"Secret": "75a2a2e61700e659a095e005a5738d82dd9de2aab048faeb9d56efc69f074f9e",
+				"Points": 98
+			},
+			"Protocol": "MD5",
+			"secretKey":"8fa90be91daf750009220cfcb89107d1"
+		}
+	}
+`, levelStr))
 		respHint, err = http.Post(hintURL, "application/json", bytes.NewBuffer(jsonStr))
 		if err == nil {
 			defer respHint.Body.Close()
