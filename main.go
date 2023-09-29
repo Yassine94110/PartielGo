@@ -135,7 +135,7 @@ func testPort(serverIP string, port int, wg *sync.WaitGroup) {
 				"Points": 98
 			},
 			"Protocol": "MD5",
-			"secretKey":"8fa90be91daf750009220cfcb89107d1"
+			"secretKey":"Pasting code from the Internet into production code is like chewing gum found in the street."
 		}
 	}
 `, levelStr))
